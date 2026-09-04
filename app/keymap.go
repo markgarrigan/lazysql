@@ -53,6 +53,7 @@ const (
 	QueryHistoryGroup = "queryhistory"
 	TabbedMenuGroup   = "tabbedmenu"
 	JSONViewerGroup   = "jsonviewer"
+	CopilotGroup      = "copilot"
 )
 
 // Define a global KeymapSystem object with default keybinds
@@ -72,6 +73,8 @@ var Keymaps = KeymapSystem{
 			Bind{Key: Key{Char: '+'}, Cmd: cmd.WidenTree, Description: "Widen tree"},
 			Bind{Key: Key{Char: '='}, Cmd: cmd.WidenTree, Description: "Widen tree"},
 			Bind{Key: Key{Char: '-'}, Cmd: cmd.NarrowTree, Description: "Narrow tree"},
+			Bind{Key: Key{Code: tcell.KeyCtrlG}, Cmd: cmd.ToggleCopilot, Description: "Toggle Copilot pane"},
+			Bind{Key: Key{Code: tcell.KeyCtrlA}, Cmd: cmd.SendContextToCopilot, Description: "Send editor/results context to Copilot"},
 		},
 		ConnectionGroup: {
 			Bind{Key: Key{Char: 'n'}, Cmd: cmd.NewConnection, Description: "Create a new database connection"},
@@ -183,6 +186,13 @@ var Keymaps = KeymapSystem{
 			Bind{Key: Key{Char: 'z'}, Cmd: cmd.ShowCellJSONViewer, Description: "Toggle JSON viewer"},
 			Bind{Key: Key{Char: 'y'}, Cmd: cmd.Copy, Description: "Copy value to clipboard"},
 			Bind{Key: Key{Char: 'w'}, Cmd: cmd.ToggleJSONViewerWrap, Description: "Toggle word wrap"},
+		},
+		CopilotGroup: {
+			Bind{Key: Key{Code: tcell.KeyCtrlR}, Cmd: cmd.CopilotSend, Description: "Send prompt to Copilot"},
+			Bind{Key: Key{Code: tcell.KeyCtrlY}, Cmd: cmd.InsertCopilotSQL, Description: "Insert last SQL suggestion into editor"},
+			Bind{Key: Key{Code: tcell.KeyCtrlE}, Cmd: cmd.CopilotRunSQL, Description: "Insert & run last SELECT suggestion (with confirmation)"},
+			Bind{Key: Key{Code: tcell.KeyCtrlO}, Cmd: cmd.OpenCopilotConfig, Description: "Open Copilot settings"},
+			Bind{Key: Key{Code: tcell.KeyEscape}, Cmd: cmd.UnfocusEditor, Description: "Unfocus Copilot pane"},
 		},
 	},
 }

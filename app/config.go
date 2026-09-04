@@ -10,6 +10,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/jorgerojas26/lazysql/drivers"
+	"github.com/jorgerojas26/lazysql/internal/copilot"
 	"github.com/jorgerojas26/lazysql/models"
 )
 
@@ -31,6 +32,7 @@ func defaultConfig() *Config {
 			JSONViewerWordWrap:           false,
 			EnterOpensJSONViewer:         false,
 			ConfirmOnQuit:                true,
+			Copilot:                      copilot.DefaultConfig(),
 		},
 	}
 }
@@ -178,6 +180,10 @@ func LoadConfig(configFile string) error {
 		App.config.Connections[i].URL = parseConfigURL(&conn)
 	}
 
+	if App.config.AppConfig != nil {
+		App.config.AppConfig.Copilot = copilot.Normalize(App.config.AppConfig.Copilot)
+	}
+
 	if err := ApplyKeymapConfig(App.config.Keymaps); err != nil {
 		return err
 	}
@@ -201,6 +207,27 @@ func expandEnvVars(s string) string {
 func (c *Config) SaveConnections(connections []models.Connection) error {
 	c.Connections = connections
 
+	configFile := c.ConfigFile
+	if c.LocalConfigFile != "" {
+		configFile = c.LocalConfigFile
+	}
+
+	if err := os.MkdirAll(filepath.Dir(configFile), 0o700); err != nil {
+		return err
+	}
+
+	file, err := os.Create(configFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return toml.NewEncoder(file).Encode(c)
+}
+
+// Save persists the full configuration (application settings and connections)
+// to the active config file.
+func (c *Config) Save() error {
 	configFile := c.ConfigFile
 	if c.LocalConfigFile != "" {
 		configFile = c.LocalConfigFile

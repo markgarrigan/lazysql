@@ -80,6 +80,12 @@ func (a *Application) Config() *models.AppConfig {
 	return a.config.AppConfig
 }
 
+// SaveAppConfig persists the current application configuration (including
+// Copilot settings) to the config file, preserving connections.
+func (a *Application) SaveAppConfig() error {
+	return a.config.Save()
+}
+
 // Connections returns the database connections.
 func (a *Application) Connections() []models.Connection {
 	return a.config.Connections

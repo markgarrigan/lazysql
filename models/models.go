@@ -15,6 +15,22 @@ type AppConfig struct {
 	JSONViewerWordWrap           bool
 	EnterOpensJSONViewer         bool
 	ConfirmOnQuit                bool
+	Copilot                      CopilotConfig `toml:"copilot"`
+}
+
+// CopilotConfig holds user-facing GitHub Copilot Chat settings. Everything that
+// could leak data or make network calls is disabled by default.
+type CopilotConfig struct {
+	// Enabled turns the Copilot pane on. Off by default.
+	Enabled bool
+	// AuthMethod is either "device" or "pat".
+	AuthMethod string
+	// Model is the Copilot Chat model identifier.
+	Model string
+	// AllowRowData permits sending result-set rows to the model. Off by default.
+	AllowRowData bool
+	// MaxRows bounds how many rows are included when AllowRowData is true.
+	MaxRows int
 }
 
 type Connection struct {
