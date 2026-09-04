@@ -14,6 +14,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.8.0
 	github.com/mitchellh/go-linereader v0.0.0-20190213213312-1b945b3263eb
 	github.com/pelletier/go-toml/v2 v2.2.3
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/rivo/tview v0.0.0-20241103174730-c76f7879f592
 	github.com/xo/dburl v0.23.2
 	modernc.org/sqlite v1.34.1
@@ -36,7 +37,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/crypto v0.24.0 // indirect

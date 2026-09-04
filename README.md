@@ -80,6 +80,7 @@ I use Lazysql daily in my full-time job as a full-stack javascript developer in 
 - [x] Can manage multiple connections (Backspace)
 - [x] Tabs
 - [x] SQL Editor (CTRL + e)
+- [x] GitHub Copilot Chat pane (opt-in, CTRL + g)
 
 <!-- GETTING STARTED -->
 
@@ -184,6 +185,37 @@ The `[application]` section is used to define some app settings. Not all setting
 | SidebarOverlay | false | Show sidebar as overlay instead of side panel |
 | JSONViewerWordWrap | false | Enable word wrap in JSON viewer |
 | EnterOpensJSONViewer | false | Open JSON viewer when pressing Enter on a cell |
+
+### GitHub Copilot Chat (optional)
+
+LazySQL includes an optional GitHub Copilot Chat pane (requires an active GitHub Copilot subscription). It is **disabled by default**. Toggle the pane with `<Ctrl+G>` and open its settings with `<Ctrl+O>` while the pane is focused.
+
+The assistant is aware of the current connection, database provider and schema. It can help you write and explain SQL. For safety:
+
+- Copilot **never executes SQL on its own**. Suggested read-only `SELECT` queries can be inserted and run only after an explicit confirmation prompt.
+- **Modifying SQL** (INSERT/UPDATE/DELETE/DROP/…) is always provided **as text only** for you to review and run manually.
+- Sending result-set **row data** to Copilot is **off by default** and must be enabled in settings (bounded by `MaxRows`).
+
+Authenticate either by logging in with GitHub (OAuth device flow) or by providing a Personal Access Token in the settings modal. The long-lived token is stored in a permission-restricted file (`0o600`) in the config directory; it can also be sourced from an environment variable using `${env:VAR}`.
+
+Copilot settings live under `[application.copilot]`:
+
+```toml
+[application.copilot]
+Enabled = false        # turn the Copilot pane on
+AuthMethod = 'device'  # 'device' or 'pat'
+Model = 'gpt-4o'       # Copilot Chat model identifier
+AllowRowData = false   # allow sending result rows as context
+MaxRows = 50           # cap on rows sent when AllowRowData is true
+```
+
+| Setting | Default | Description |
+| ------- | ------- | ----------- |
+| Enabled | false | Enable the Copilot pane |
+| AuthMethod | device | Authentication method: `device` or `pat` |
+| Model | gpt-4o | Copilot Chat model identifier |
+| AllowRowData | false | Allow sending result-set rows to Copilot |
+| MaxRows | 50 | Maximum rows sent as context when AllowRowData is true |
 
 ### Local Configuration
 
@@ -464,6 +496,18 @@ Available groups: `Home`, `Connection`, `Tree`, `TreeFilter`, `Table`, `Editor`,
 | Ctrl-P | SearchGlobal | Global search |
 | Ctrl-_ | ToggleQueryHistory | Toggle query history modal |
 | T | ToggleTree | Toggle file tree |
+| Ctrl-G | ToggleCopilot | Toggle GitHub Copilot pane |
+| Ctrl-A | SendContextToCopilot | Send editor/results context to Copilot |
+
+#### Copilot
+
+| Default Key | Command | Description |
+| --- | --- | --- |
+| Ctrl-R | CopilotSend | Send prompt to Copilot |
+| Ctrl-Y | InsertCopilotSQL | Insert last SQL suggestion into editor |
+| Ctrl-E | CopilotRunSQL | Insert & run last SELECT suggestion (with confirmation) |
+| Ctrl-O | OpenCopilotConfig | Open Copilot settings |
+| Esc | UnfocusEditor | Unfocus Copilot pane |
 
 #### Connection
 
