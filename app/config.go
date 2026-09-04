@@ -206,23 +206,7 @@ func expandEnvVars(s string) string {
 
 func (c *Config) SaveConnections(connections []models.Connection) error {
 	c.Connections = connections
-
-	configFile := c.ConfigFile
-	if c.LocalConfigFile != "" {
-		configFile = c.LocalConfigFile
-	}
-
-	if err := os.MkdirAll(filepath.Dir(configFile), 0o700); err != nil {
-		return err
-	}
-
-	file, err := os.Create(configFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return toml.NewEncoder(file).Encode(c)
+	return c.Save()
 }
 
 // Save persists the full configuration (application settings and connections)

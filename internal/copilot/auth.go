@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -60,6 +61,7 @@ type Authenticator struct {
 	httpClient *http.Client
 	store      *TokenStore
 
+	mu          sync.Mutex
 	githubToken string
 	copilot     copilotToken
 }
@@ -81,6 +83,8 @@ func NewAuthenticator(httpClient *http.Client, store *TokenStore) *Authenticator
 
 // HasGitHubToken reports whether a long-lived GitHub token is loaded.
 func (a *Authenticator) HasGitHubToken() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	return a.githubToken != ""
 }
 
@@ -91,8 +95,10 @@ func (a *Authenticator) SetPAT(token string) error {
 	if token == "" {
 		return errors.New("copilot: empty token")
 	}
+	a.mu.Lock()
 	a.githubToken = token
 	a.copilot = copilotToken{} // invalidate any cached Copilot token
+	a.mu.Unlock()
 	if a.store != nil {
 		return a.store.Save(token)
 	}
@@ -101,8 +107,10 @@ func (a *Authenticator) SetPAT(token string) error {
 
 // Logout clears the in-memory tokens and removes the persisted token.
 func (a *Authenticator) Logout() error {
+	a.mu.Lock()
 	a.githubToken = ""
 	a.copilot = copilotToken{}
+	a.mu.Unlock()
 	if a.store != nil {
 		return a.store.Delete()
 	}
@@ -173,8 +181,10 @@ func (a *Authenticator) PollForToken(ctx context.Context, deviceCode string) err
 	}
 
 	if body.AccessToken != "" {
+		a.mu.Lock()
 		a.githubToken = body.AccessToken
 		a.copilot = copilotToken{}
+		a.mu.Unlock()
 		if a.store != nil {
 			return a.store.Save(body.AccessToken)
 		}
@@ -230,19 +240,25 @@ func (a *Authenticator) WaitForToken(ctx context.Context, dc *DeviceCode) error 
 // CopilotToken returns a valid short-lived Copilot token, exchanging or
 // refreshing it as needed.
 func (a *Authenticator) CopilotToken(ctx context.Context) (string, error) {
-	if a.githubToken == "" {
+	a.mu.Lock()
+	githubToken := a.githubToken
+	if githubToken == "" {
+		a.mu.Unlock()
 		return "", ErrNoToken
 	}
 	// Reuse cached token if it is still valid (with a small safety margin).
 	if a.copilot.Token != "" && time.Now().Unix() < a.copilot.ExpiresAt-60 {
-		return a.copilot.Token, nil
+		cached := a.copilot.Token
+		a.mu.Unlock()
+		return cached, nil
 	}
+	a.mu.Unlock()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, copilotTokenURL, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Authorization", "token "+a.githubToken)
+	req.Header.Set("Authorization", "token "+githubToken)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := a.httpClient.Do(req)
@@ -267,7 +283,9 @@ func (a *Authenticator) CopilotToken(ctx context.Context) (string, error) {
 	if tok.Token == "" {
 		return "", ErrNoCopilotSubscription
 	}
+	a.mu.Lock()
 	a.copilot = tok
+	a.mu.Unlock()
 	return tok.Token, nil
 }
 

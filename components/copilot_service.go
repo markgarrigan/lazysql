@@ -3,6 +3,7 @@ package components
 import (
 	"context"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/jorgerojas26/lazysql/app"
@@ -30,7 +31,7 @@ func getCopilotService() *copilotService {
 
 	var store *copilot.TokenStore
 	if dir, err := app.GetConfigPath(); err == nil {
-		store = &copilot.TokenStore{Dir: dir + "/lazysql"}
+		store = &copilot.TokenStore{Dir: filepath.Join(dir, "lazysql")}
 	}
 
 	httpClient := &http.Client{Timeout: 120 * time.Second}
