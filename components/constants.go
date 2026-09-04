@@ -94,8 +94,9 @@ const (
 
 // Misc (until i find a better name)
 const (
-	focusedWrapperLeft  string = "left"
-	focusedWrapperRight string = "right"
+	focusedWrapperLeft    string = "left"
+	focusedWrapperRight   string = "right"
+	focusedWrapperCopilot string = "copilot"
 
 	colorTableChange = tcell.ColorOrange
 	colorTableInsert = tcell.ColorDarkGreen

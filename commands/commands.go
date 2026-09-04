@@ -14,6 +14,14 @@ const (
 	WidenTree
 	NarrowTree
 
+	// Copilot
+	ToggleCopilot
+	OpenCopilotConfig
+	SendContextToCopilot
+	InsertCopilotSQL
+	CopilotRunSQL
+	CopilotSend
+
 	// Movement: Basic
 	MoveUp
 	MoveDown
@@ -109,6 +117,20 @@ func (c Command) String() string {
 		return "WidenTree"
 	case NarrowTree:
 		return "NarrowTree"
+
+	// Copilot
+	case ToggleCopilot:
+		return "ToggleCopilot"
+	case OpenCopilotConfig:
+		return "OpenCopilotConfig"
+	case SendContextToCopilot:
+		return "SendContextToCopilot"
+	case InsertCopilotSQL:
+		return "InsertCopilotSQL"
+	case CopilotRunSQL:
+		return "CopilotRunSQL"
+	case CopilotSend:
+		return "CopilotSend"
 
 	// Movement: Basic
 	case MoveUp:

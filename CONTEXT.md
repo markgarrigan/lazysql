@@ -39,3 +39,25 @@ _Avoid_: queue, race
 **Stale Data**:
 Old table results remain visible during a reload. Only cleared on success when new data arrives. Exception: SQL editor queries clear immediately on execute.
 _Avoid_: blank screen during load
+
+## Copilot
+
+**Copilot Pane**:
+An optional, opt-in chat pane (off by default) shown as a toggleable column next to the results/editor. It talks to GitHub Copilot Chat and is aware of the current connection, provider and schema.
+_Avoid_: assistant tab, AI sidebar
+
+**Context Transfer**:
+Keyboard-driven, two-way exchange between the SQL editor/results and the Copilot Pane. Editor query, results and schema can be sent into Copilot; a suggested query can be inserted back into the editor.
+_Avoid_: copy-paste, auto-sync
+
+**Ask-Before-Execute**:
+Copilot never runs SQL on its own. A suggested read-only SELECT can be inserted and run only after an explicit confirmation prompt.
+_Avoid_: auto-run, silent execute
+
+**Text-Only Mutation**:
+Any modifying SQL (INSERT/UPDATE/DELETE/DROP/…) suggested by Copilot is provided strictly as text to copy and review. There is no run path for it.
+_Avoid_: run mutation, execute change
+
+**Row Data Opt-In**:
+Sending result-set rows to Copilot is disabled by default and, when enabled, is bounded by a configurable row cap. Schema and column names may be shared without row data.
+_Avoid_: send everything, full dump

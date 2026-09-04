@@ -12,6 +12,7 @@ import (
 	"github.com/jorgerojas26/lazysql/commands"
 	"github.com/jorgerojas26/lazysql/drivers"
 	"github.com/jorgerojas26/lazysql/helpers/logger"
+	"github.com/jorgerojas26/lazysql/internal/copilot"
 	"github.com/jorgerojas26/lazysql/internal/history"
 	"github.com/jorgerojas26/lazysql/models"
 )
@@ -23,6 +24,9 @@ type Home struct {
 	LeftWrapper          *tview.Flex
 	RightWrapper         *tview.Flex
 	MainContent          *tview.Flex
+	CopilotPane          *CopilotPane
+	CopilotWrapper       *tview.Flex
+	copilotVisible       bool
 	leftWrapperVisible   bool
 	treePinned           bool
 	treeWidth            int
@@ -76,6 +80,15 @@ func NewHomePage(connection models.Connection, dbdriver drivers.Driver) *Home {
 	tabbedPane := NewTabbedPane()
 
 	home.TabbedPane = tabbedPane
+
+	home.CopilotPane = NewCopilotPane(home)
+	copilotWrapper := tview.NewFlex()
+	copilotWrapper.SetBorderColor(app.Styles.InverseTextColor)
+	copilotWrapper.SetBorder(true)
+	copilotWrapper.SetTitle(" Copilot ")
+	copilotWrapper.SetTitleAlign(tview.AlignLeft)
+	copilotWrapper.AddItem(home.CopilotPane.GetPrimitive(), 0, 1, true)
+	home.CopilotWrapper = copilotWrapper
 
 	qhm := NewQueryHistoryModal(connectionIdentifier, func(selectedQuery string) {
 		home.createOrFocusEditorTab()
@@ -295,6 +308,10 @@ func (home *Home) focusRightWrapper() {
 		home.focusTab(tab)
 	}
 
+	if home.CopilotWrapper != nil {
+		home.CopilotWrapper.SetBorderColor(app.Styles.InverseTextColor)
+	}
+
 	home.FocusedWrapper = focusedWrapperRight
 }
 
@@ -347,6 +364,10 @@ func (home *Home) focusLeftWrapper() {
 	home.TabbedPane.SetBlur()
 
 	app.App.SetFocus(home.Tree)
+
+	if home.CopilotWrapper != nil {
+		home.CopilotWrapper.SetBorderColor(app.Styles.InverseTextColor)
+	}
 
 	home.FocusedWrapper = focusedWrapperLeft
 }
@@ -603,6 +624,18 @@ func (home *Home) homeInputCapture(event *tcell.EventKey) *tcell.EventKey {
 		}
 
 		return event
+	case commands.ToggleCopilot:
+		if table != nil && (table.GetIsEditing() || table.GetIsFiltering()) {
+			return event
+		}
+		home.toggleCopilot()
+		return nil
+	case commands.SendContextToCopilot:
+		if table != nil && (table.GetIsEditing() || table.GetIsFiltering()) {
+			return event
+		}
+		home.sendContextToCopilot()
+		return nil
 	}
 
 	return event
@@ -668,18 +701,109 @@ func extractDatabaseName(rawURL string) string {
 }
 
 func (home *Home) toggleLeftWrapper() {
+	home.leftWrapperVisible = !home.leftWrapperVisible
+	home.rebuildMainContent()
 	if home.leftWrapperVisible {
-		home.MainContent.Clear()
-		home.MainContent.AddItem(home.RightWrapper, 0, 5, false)
-		home.leftWrapperVisible = false
-		home.focusRightWrapper()
-	} else {
-		home.MainContent.Clear()
-		home.MainContent.AddItem(home.LeftWrapper, home.treeWidth, 1, false)
-		home.MainContent.AddItem(home.RightWrapper, 0, 5, false)
-		home.leftWrapperVisible = true
 		home.focusLeftWrapper()
+	} else {
+		home.focusRightWrapper()
 	}
+	app.App.ForceDraw()
+}
+
+// rebuildMainContent lays out the main content columns based on the current
+// visibility flags (tree, results, and the optional Copilot pane).
+func (home *Home) rebuildMainContent() {
+	home.MainContent.Clear()
+	if home.leftWrapperVisible {
+		home.MainContent.AddItem(home.LeftWrapper, home.treeWidth, 1, false)
+	}
+	home.MainContent.AddItem(home.RightWrapper, 0, 5, false)
+	if home.copilotVisible {
+		home.MainContent.AddItem(home.CopilotWrapper, 0, 3, false)
+	}
+}
+
+// toggleCopilot shows or hides the Copilot pane column. It is a no-op unless
+// Copilot is enabled in the app config.
+func (home *Home) toggleCopilot() {
+	if !home.copilotVisible && !copilotConfig().Enabled {
+		home.CopilotPane.notifyDisabled()
+		home.copilotVisible = true
+		home.rebuildMainContent()
+		home.focusCopilotWrapper()
+		app.App.ForceDraw()
+		return
+	}
+
+	home.copilotVisible = !home.copilotVisible
+	home.rebuildMainContent()
+	if home.copilotVisible {
+		home.focusCopilotWrapper()
+	} else {
+		home.focusRightWrapper()
+	}
+	app.App.ForceDraw()
+}
+
+func (home *Home) focusCopilotWrapper() {
+	home.Tree.RemoveHighlight()
+	home.RightWrapper.SetBorderColor(app.Styles.InverseTextColor)
+	home.LeftWrapper.SetBorderColor(app.Styles.InverseTextColor)
+	home.CopilotWrapper.SetBorderColor(app.Styles.PrimaryTextColor)
+	home.TabbedPane.SetBlur()
+	home.CopilotPane.FocusInput()
+	home.FocusedWrapper = focusedWrapperCopilot
+}
+
+// sendContextToCopilot builds a context message from the current editor query,
+// results, and schema, and attaches it to the Copilot conversation.
+func (home *Home) sendContextToCopilot() {
+	if !home.copilotVisible {
+		home.toggleCopilot()
+	}
+
+	in := copilot.ContextInput{
+		ReadOnly:     home.ReadOnly,
+		AllowRowData: copilotConfig().AllowRowData,
+		MaxRows:      copilotConfig().MaxRows,
+		Database:     home.Tree.GetSelectedDatabase(),
+	}
+
+	if home.DBDriver != nil {
+		in.Provider = home.DBDriver.GetProvider()
+	}
+	if in.Database == "" && home.ConnectionURL != "" {
+		in.Database = extractDatabaseName(home.ConnectionURL)
+	}
+
+	tab := home.TabbedPane.GetCurrentTab()
+	if tab != nil {
+		if table, ok := tab.Content.(*ResultsTable); ok {
+			if table.GetDatabaseName() != "" {
+				in.Database = table.GetDatabaseName()
+			}
+			if table.Editor != nil {
+				in.Query = table.Editor.GetText()
+			}
+			if records := table.GetRecords(); len(records) > 0 {
+				rs := &copilot.ResultSet{Columns: records[0]}
+				if len(records) > 1 {
+					rs.Rows = records[1:]
+				}
+				in.Results = rs
+			}
+		}
+	}
+
+	var provider copilot.SchemaProvider
+	if home.DBDriver != nil {
+		provider = home.DBDriver
+	}
+
+	message := copilot.BuildContextMessage(provider, in)
+	home.CopilotPane.AddContext(message)
+	home.focusCopilotWrapper()
 	app.App.ForceDraw()
 }
 
